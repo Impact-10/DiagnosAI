@@ -9,13 +9,15 @@ DiagnosAI/
 │   │   │   ├── users.py
 │   │   │   ├── healthdata.py
 │   │   │   ├── diagnosis.py
-│   │   │   └── records.py
+│   │   │   ├── records.py
+│   │   │   └── cache_test.py           # NEW: API router to test cache operations
 │   │   ├── core/
 │   │   │   ├── __init__.py
 │   │   │   ├── config.py
-│   │   │   ├── dependencies.py
+│   │   │   ├── dependencies.py         # UPDATED: Include Redis client dependency
 │   │   │   ├── logging.py
-│   │   │   └── security.py
+│   │   │   ├── security.py
+│   │   │   └── cache.py                # NEW: Cache helpers and abstractions for Redis caching
 │   │   ├── models/
 │   │   │   ├── __init__.py
 │   │   │   ├── user.py
@@ -31,23 +33,25 @@ DiagnosAI/
 │   │       ├── __init__.py
 │   │       ├── gemini_client.py
 │   │       ├── cdc_client.py
-│   │       └── nlp_utils.py
+│   │       ├── nlp_utils.py
+│   │       └── redis_client.py      (not for now)   # NEW: Redis client connection wrapper and utilities
+│   │
 │   ├── tests/
 │   ├── .env
-│   ├── requirements.txt
+│   ├── requirements.txt                # UPDATED: Add redis package here
 │   ├── README.md
 │   └── run.sh
 │
 ├── frontend/
-│   ├── public/                # Static files like index.html, icons, etc.
+│   ├── public/
 │   ├── src/
-│   │   ├── components/        # Reusable UI components
-│   │   ├── screens/           # Screens or pages
-│   │   ├── assets/            # Images, fonts, etc.
-│   │   ├── App.js             # Entry point for React or main frontend file
-│   │   └── index.js           # Frontend rendering bootstrap
+│   │   ├── components/
+│   │   ├── screens/
+│   │   ├── assets/
+│   │   ├── App.js
+│   │   └── index.js
 │   ├── package.json
 │   ├── .env
 │   └── README.md
 │
-└── docker-compose.yml         # Optional multi-service orchestration
+└── docker-compose.yml

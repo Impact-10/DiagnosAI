@@ -1,26 +1,30 @@
-# backend/app/main.py
-
 from fastapi import FastAPI
-from app.api import users, healthdata, diagnosis, records
+from fastapi.middleware.cors import CORSMiddleware
+from app.api import diagnosis, users
 
-# At the top of your main.py or core/config.py
-from dotenv import load_dotenv
-import os
+app = FastAPI(
+    title="DiagnosAI Backend",
+    description="Backend API for DiagnosAI Health Chatbot",
+    version="1.0.0",
+)
 
-load_dotenv()  # load variables from .env into environment
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+]
 
-# Now you can access GEMINI_API_KEY as
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(diagnosis.router, prefix="/api", tags=["diagnosis"])
 
-app = FastAPI(title="DiagnosAI Backend")
-
-app.include_router(users.router, prefix="/users", tags=["Users"])
-app.include_router(healthdata.router, prefix="/healthdata", tags=["Health Data"])
-app.include_router(diagnosis.router, prefix="/diagnosis", tags=["Diagnosis"])
-app.include_router(records.router, prefix="/records", tags=["Records"])
-app.include_router(healthdata.router, prefix="/api")
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to DiagnosAI backend!"}
+    return {"message": "Welcome to DiagnosAI Backend"}
