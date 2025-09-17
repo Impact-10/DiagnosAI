@@ -1,0 +1,53 @@
+DiagnosAI/
+│
+├── backend/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── users.py
+│   │   │   ├── healthdata.py
+│   │   │   ├── diagnosis.py
+│   │   │   └── records.py
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py
+│   │   │   ├── dependencies.py
+│   │   │   ├── logging.py
+│   │   │   └── security.py
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   ├── health_info.py
+│   │   │   ├── diagnosis.py
+│   │   │   └── record.py
+│   │   ├── db/
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py
+│   │   │   ├── session.py
+│   │   │   └── crud.py
+│   │   └── services/
+│   │       ├── __init__.py
+│   │       ├── gemini_client.py
+│   │       ├── cdc_client.py
+│   │       └── nlp_utils.py
+│   ├── tests/
+│   ├── .env
+│   ├── requirements.txt
+│   ├── README.md
+│   └── run.sh
+│
+├── frontend/
+│   ├── public/                # Static files like index.html, icons, etc.
+│   ├── src/
+│   │   ├── components/        # Reusable UI components
+│   │   ├── screens/           # Screens or pages
+│   │   ├── assets/            # Images, fonts, etc.
+│   │   ├── App.js             # Entry point for React or main frontend file
+│   │   └── index.js           # Frontend rendering bootstrap
+│   ├── package.json
+│   ├── .env
+│   └── README.md
+│
+└── docker-compose.yml         # Optional multi-service orchestration
