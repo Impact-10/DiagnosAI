@@ -1,16 +1,13 @@
-from pydantic import BaseModel
-from typing import List, Optional
+from sqlalchemy import Column, Integer, String, ForeignKey
+from app.db.base import Base
+from sqlalchemy.orm import relationship
 
-# Pydantic schemas for diagnosis inputs and outputs
-class DiagnosisRequest(BaseModel):
-    symptoms: List[str]
-    age: Optional[int] = None
-    gender: Optional[str] = None
+class Diagnosis(Base):
+    __tablename__ = "diagnoses"
 
-class DiagnosisResult(BaseModel):
-    probable_diseases: List[str]
-    recommendations: str
-    severity_level: str
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    prompt = Column(String, nullable=False)
+    diagnosis = Column(String, nullable=False)
 
-    class Config:
-        orm_mode = True
+    user = relationship("User")

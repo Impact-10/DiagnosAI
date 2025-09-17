@@ -1,31 +1,38 @@
+import httpx
+import asyncio
+import logging
 import os
 from dotenv import load_dotenv
-from google import genai
-import asyncio
 
-# Load environment variables from .env
 load_dotenv()
 
+GEMINI_API_URL = os.getenv(
+    "GEMINI_API_URL",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+)
 API_KEY = os.getenv("GEMINI_API_KEY")
-if not API_KEY:
-    raise ValueError("❌ GEMINI_API_KEY is missing! Please set it in .env")
 
-client = genai.Client(api_key=API_KEY)
+logger = logging.getLogger("gemini_client")
 
-async def get_diagnosis(prompt, images=None, health_data=None):
-    contents = prompt
-    if images:
-        contents += str(images)
-    if health_data:
-        contents += str(health_data)
 
-    loop = asyncio.get_event_loop()
-    response = await loop.run_in_executor(
-        None,
-        lambda: client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=contents,
-            config=genai.types.GenerateContentConfig(max_output_tokens=10),
-        )
-    )
-    return response.text
+async def get_diagnosis_with_history(contents: list, retries=3) -> dict:
+    payload = {
+        "contents": contents
+    }
+    headers = {
+        "x-goog-api-key": API_KEY,
+        "Content-Type": "application/json",
+    }
+
+    async with httpx.AsyncClient() as client:
+        for attempt in range(retries):
+            try:
+                response = await client.post(GEMINI_API_URL, json=payload, headers=headers, timeout=10)
+                response.raise_for_status()
+                data = response.json()
+                return data.get("candidates", [{}])[0]  # return dict first candidate
+            except Exception as e:
+                logger.error(f"Gemini API request failed (attempt {attempt + 1}): {str(e)}")
+                if attempt == retries - 1:
+                    raise
+                await asyncio.sleep(2 ** attempt)
