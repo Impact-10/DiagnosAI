@@ -41,18 +41,18 @@ async def create_diagnosis(
 
     messages = await get_session_messages(session_id)
     instruction = (
-        "You are a helpful assistant that provides possible medical conditions "
-        "based on symptoms described, without giving a direct diagnosis or medical advice. "
-        "List possible causes and suggest what to watch for."
+        "You are a doctor providing a clear diagnosis based on symptoms. "
+        "Respond concisely, avoid mentioning you are AI or disclaimers. "
+        "Make it sound like a real doctor-patient conversation."
     )
 
-    diagnosis_prompt = instruction + "\n\nUser symptoms:\n" + req.prompt
+    diagnosis_prompt = instruction + "\n\nSymptoms:\n" + req.prompt
 
     contents = [{"role": m.role, "parts": [{"text": m.content}]} for m in messages]
     contents.append({"role": "user", "parts": [{"text": diagnosis_prompt}]})
 
-
     diagnosis_data = await get_diagnosis_with_history(contents)
+
 
     # Extract text safely for response and saving message
     diagnosis_text = ""

@@ -52,5 +52,16 @@ This folder contains the backend code for DiagnosAI, an AI-powered health chatbo
 ---
 
 This modular backend structure ensures fast, scalable, and collaborative development for DiagnosAI.
-curl -X POST http://127.0.0.1:8000/api/diagnosis -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIn0.t3_DM4moMnetRLI3w9FNY0m_Pg3ZJ-5dbnhJCduSuOA" -d '{"prompt":"I have fever and cough"}'
-curl -X POST http://127.0.0.1:8000/api/users/token -H "Content-Type: application/json" -d '{"email":"test@example.com","password":"testpassword"}'
+
+python -m uvicorn app.main:app --reload
+
+curl -X POST http://localhost:8000/api/users/register -H "Content-Type: application/json" -d '{"email":"user2@example.com", "password":"StrongPassword123"}'
+
+curl -X POST http://localhost:8000/api/users/token \
+-H "Content-Type: application/json" \
+-d '{"email":"test@example.com","password":"testpassword"}'
+
+curl -X POST http://localhost:8000/api/diagnosis \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIn0.t3_DM4moMnetRLI3w9FNY0m_Pg3ZJ-5dbnhJCduSuOA" \
+-H "Content-Type: application/json" \
+-d '{"prompt": "I have fever and cough"}'
