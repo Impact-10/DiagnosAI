@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+sqlalchemy
+databases  # for async DB access
+python-dotenv  # env variable management
+passlib[bcrypt]  # for password hashing
+jose  # for JWT token management
