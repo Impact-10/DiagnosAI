@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { LogOut, Settings, User } from "lucide-react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
 interface HeaderProps {
@@ -33,9 +34,15 @@ export function Header({ user, profile }: HeaderProps) {
   return (
     <header className="border-b border-slate-800 bg-slate-900 px-6 py-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-white">AI Health Assistant</h1>
-          <p className="text-sm text-slate-400">Your personal health companion</p>
+        <div className="space-y-1">
+          <h1 className="text-xl font-semibold text-white">DiagonsAI</h1>
+          <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <span>Your personal health companion</span>
+            <span className="hidden sm:inline-block w-px h-3 bg-slate-700" />
+            <Link href="/myths" className="hover:text-slate-200 transition-colors">Myths</Link>
+            <span className="hidden sm:inline-block w-px h-3 bg-slate-700" />
+            <Link href="/dos-donts" className="hover:text-slate-200 transition-colors">Dos & Don&apos;ts</Link>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           <DropdownMenu>

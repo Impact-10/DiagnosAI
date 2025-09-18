@@ -5,6 +5,10 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
+import { FacilitiesPopup } from "@/components/facilities/facilities-popup"
+import Link from "next/link"
+import { Stethoscope } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Plus, MessageSquare, Trash2, Edit2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -31,6 +35,7 @@ export function Sidebar({ userId, activeThreadId, onThreadSelect, onThreadDelete
   const [editingThreadId, setEditingThreadId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState("")
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     loadThreads()
@@ -115,7 +120,7 @@ export function Sidebar({ userId, activeThreadId, onThreadSelect, onThreadDelete
   }
 
   return (
-    <div className="bg-slate-900 border-r border-slate-800 flex flex-col flex-1">
+  <div className="bg-slate-900 border-r border-slate-800 flex flex-col flex-1">
       <div className="p-4 border-b border-slate-800">
         <Button onClick={createNewThread} className="w-full bg-blue-600 hover:bg-blue-700">
           <Plus className="mr-2 h-4 w-4" />
@@ -183,6 +188,20 @@ export function Sidebar({ userId, activeThreadId, onThreadSelect, onThreadDelete
           )}
         </div>
       </ScrollArea>
+      <div className="p-3 border-t border-slate-800 space-y-4">
+        <p className="text-[10px] font-semibold tracking-wide text-slate-500 uppercase px-1">Health Tools</p>
+        <FacilitiesPopup />
+        <Button
+          asChild
+          variant="outline"
+          className="w-full justify-start gap-2 bg-sidebar-accent/30 border-border text-foreground/90 hover:bg-sidebar-accent/50 hover:text-foreground"
+        >
+          <Link href="/dashboard/doctor-chat" className="flex items-center gap-2">
+            <Stethoscope className="h-4 w-4 text-primary" />
+            <span className="font-medium">Doctor Consultations</span>
+          </Link>
+        </Button>
+      </div>
     </div>
   )
 }

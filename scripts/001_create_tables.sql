@@ -64,12 +64,46 @@ CREATE TABLE IF NOT EXISTS public.health_records (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Doctors catalog (basic). In real-world, would be managed separately/admin only
+CREATE TABLE IF NOT EXISTS public.doctors (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name TEXT NOT NULL,
+  specialty TEXT,
+  bio TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Doctor threads: a consultation initiated by a user, optionally assigned to a doctor
+CREATE TABLE IF NOT EXISTS public.doctor_threads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  doctor_id UUID REFERENCES public.doctors(id) ON DELETE SET NULL,
+  source_thread_id UUID REFERENCES public.threads(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Messages between user and doctors (role can be 'user' or 'doctor')
+CREATE TABLE IF NOT EXISTS public.doctor_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  doctor_thread_id UUID NOT NULL REFERENCES public.doctor_threads(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  doctor_id UUID REFERENCES public.doctors(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('user','doctor','system')),
+  content TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Enable Row Level Security on all tables
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.usage_tracking ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.health_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.doctors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.doctor_threads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.doctor_messages ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for profiles table
 CREATE POLICY "profiles_select_own" ON public.profiles FOR SELECT USING (auth.uid() = id);
@@ -100,3 +134,16 @@ CREATE POLICY "health_records_select_own" ON public.health_records FOR SELECT US
 CREATE POLICY "health_records_insert_own" ON public.health_records FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "health_records_update_own" ON public.health_records FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "health_records_delete_own" ON public.health_records FOR DELETE USING (auth.uid() = user_id);
+
+-- Doctors: read-only public listing (simplified) - allow all authenticated users to select
+CREATE POLICY "doctors_select_all" ON public.doctors FOR SELECT USING (auth.role() = 'authenticated');
+
+-- Doctor threads policies (user sees own, doctor sees assigned). For simplicity, allow only user ownership now.
+CREATE POLICY "doctor_threads_select_own" ON public.doctor_threads FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "doctor_threads_insert_own" ON public.doctor_threads FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "doctor_threads_update_own" ON public.doctor_threads FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "doctor_threads_delete_own" ON public.doctor_threads FOR DELETE USING (auth.uid() = user_id);
+
+-- Doctor messages: user can CRUD own; (future) doctor policies to be added when doctor auth implemented
+CREATE POLICY "doctor_messages_select_own" ON public.doctor_messages FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "doctor_messages_insert_user" ON public.doctor_messages FOR INSERT WITH CHECK (auth.uid() = user_id);

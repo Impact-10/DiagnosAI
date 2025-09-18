@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Send, Paperclip, Loader2, MessageSquare, AlertTriangle } from "lucide-react"
+import { ChatReportDialog } from "./chat-report-dialog"
 import { ChatMessage } from "./chat-message"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { FileUpload } from "./file-upload"
@@ -254,6 +255,11 @@ export function ChatInterface({ userId, threadId, onNewThread }: ChatInterfacePr
         className="flex-1 overflow-y-auto p-4 pr-2 scrollbar-thin scrollbar-track-slate-900 scrollbar-thumb-slate-700 hover:scrollbar-thumb-slate-600"
       >
         <div className="max-w-4xl mx-auto space-y-4">
+          {threadId && messages.length > 0 && (
+            <div className="flex justify-end">
+              <ChatReportDialog threadId={threadId} userId={userId} />
+            </div>
+          )}
           {rateLimitError && (
             <Alert className="bg-amber-950/50 border-amber-900">
               <AlertTriangle className="h-4 w-4" />

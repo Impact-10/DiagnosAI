@@ -38,7 +38,7 @@ export async function updateSession(request: NextRequest) {
 
   const path = request.nextUrl.pathname
   const isAuthRoute = path.startsWith(AUTH_ROOT)
-  const isPublic = path === "/" || path.startsWith("/api") || isAuthRoute
+  const isPublic = path === "/" || path === "/home" || path === "/myths" || path === "/dos-donts" || path.startsWith("/api") || isAuthRoute
 
   // If user not logged in and accessing a protected route -> redirect to login with next param
   if (!user && !isPublic) {

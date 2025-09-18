@@ -5,9 +5,14 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
-  generator: 'v0.app',
+  title: {
+    default: 'DiagonsAI : Health Intelligence',
+    template: 'DiagonsAI : %s',
+  },
+  description: 'DiagonsAI - AI assisted health insights, consultations, and wellness intelligence.',
+  generator: 'DiagonsAI',
+  applicationName: 'DiagonsAI',
+  icons: [{ rel: 'icon', url: '/favicon.ico' }],
 }
 
 export default function RootLayout({
