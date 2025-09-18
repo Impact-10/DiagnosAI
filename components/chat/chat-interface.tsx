@@ -6,7 +6,9 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Send, Paperclip, Loader2, MessageSquare, AlertTriangle } from "lucide-react"
+import { Send, Paperclip, Loader2, MessageSquare, AlertTriangle, Mic, MicOff } from "lucide-react"
+import { useSpeechInput } from "@/hooks/use-speech-input"
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 import { ChatReportDialog } from "./chat-report-dialog"
 import { ChatMessage } from "./chat-message"
 import { useVirtualizer } from "@tanstack/react-virtual"
@@ -42,6 +44,39 @@ export function ChatInterface({ userId, threadId, onNewThread }: ChatInterfacePr
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const autoScrollRef = useRef(true)
   const [showNewMessages, setShowNewMessages] = useState(false)
+  const { supported: speechSupported, listening, interim, final, start: startSpeech, stop: stopSpeech, reset: resetSpeech } = useSpeechInput({ interim: true })
+  const { supported: ttsSupported, speak, cancel: cancelTTS } = useTextToSpeech()
+  // Flag indicating next assistant response should be spoken
+  const speakNextRef = useRef(false)
+
+  // Merge final + interim into visible input when listening; keep user manual edits safe if they type mid-stream.
+  useEffect(() => {
+    if (!listening) return
+    setInput(() => {
+      const assembled = [final, interim].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()
+      return assembled
+    })
+  }, [final, interim, listening])
+
+  // On stop listening, ensure only final committed (interim discarded)
+  useEffect(() => {
+    if (!listening && final) {
+      setInput(prev => prev) // no-op; placeholder for future normalization
+    }
+  }, [listening, final])
+
+  const toggleMic = () => {
+    if (!speechSupported) return
+    if (listening) {
+      stopSpeech()
+    } else {
+      // Clear existing staged transcript if starting fresh
+      resetSpeech()
+      startSpeech()
+      // Mark that when this user message is sent, we should TTS the assistant reply
+      speakNextRef.current = true
+    }
+  }
 
   // Virtualization threshold (below this, normal render avoids overhead)
   const VIRTUALIZE_AFTER = 60
@@ -181,6 +216,17 @@ export function ChatInterface({ userId, threadId, onNewThread }: ChatInterfacePr
       }
 
       setMessages((prev) => [...prev.slice(0, -1), tempUserMessage, assistantMessage])
+
+      // If user used mic for this turn and TTS available, speak assistant reply
+      if (ttsSupported && speakNextRef.current) {
+        speakNextRef.current = false
+        // Basic sanitization: collapse whitespace
+        const toSpeak = assistantMessage.content.replace(/\s+/g, ' ').trim()
+        if (toSpeak) speak(toSpeak)
+      } else {
+        // Reset if not spoken (e.g., user typed instead)
+        speakNextRef.current = false
+      }
 
       if (data.threadId && data.threadId !== threadId && onNewThread) {
         onNewThread(data.threadId)
@@ -334,7 +380,7 @@ export function ChatInterface({ userId, threadId, onNewThread }: ChatInterfacePr
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask about your health..."
-                className="min-h-[60px] max-h-32 resize-none bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 pr-12"
+                className="min-h-[60px] max-h-32 resize-none bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 pr-24"
                 disabled={isLoading}
               />
               <Button
@@ -346,6 +392,24 @@ export function ChatInterface({ userId, threadId, onNewThread }: ChatInterfacePr
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
+              {speechSupported && (
+                <Button
+                  type="button"
+                  variant={listening ? "default" : "ghost"}
+                  size="sm"
+                  aria-pressed={listening}
+                  className={
+                    "absolute top-2 h-8 w-8 p-0 text-slate-400 hover:text-slate-200 transition-colors " +
+                    (listening
+                      ? "right-12 bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
+                      : "right-12")
+                  }
+                  onClick={toggleMic}
+                  title={listening ? "Stop voice input" : "Start voice input"}
+                >
+                  {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              )}
             </div>
             <Button
               type="submit"

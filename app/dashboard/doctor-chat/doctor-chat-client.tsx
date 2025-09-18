@@ -8,7 +8,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-import { Loader2, PlusCircle, RefreshCw, Send } from "lucide-react"
+import { Loader2, PlusCircle, RefreshCw, Send, Mic, MicOff, Stethoscope, MessageSquarePlus } from "lucide-react"
+import { useSpeechInput } from "@/hooks/use-speech-input"
+import { useTextToSpeech } from "@/hooks/use-text-to-speech"
 
 interface DoctorThread { id: string; title: string; created_at: string; doctor_id: string | null }
 interface DoctorMessage { id: string; role: "user" | "doctor" | "system"; content: string; created_at: string }
@@ -30,6 +32,27 @@ export default function DoctorChatClient({ userId }: { userId: string }) {
   const [selectedDoctor, setSelectedDoctor] = useState<string | null>(null)
   const [selectedSourceThread, setSelectedSourceThread] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement | null>(null)
+  const { supported: speechSupported, listening, interim, final, start: startSpeech, stop: stopSpeech, reset: resetSpeech } = useSpeechInput({ interim: true })
+  const { supported: ttsSupported, speak } = useTextToSpeech()
+  const speakNextRef = useRef(false)
+
+  useEffect(() => {
+    if (!listening) return
+    setNewMessage(() => {
+      const assembled = [final, interim].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()
+      return assembled
+    })
+  }, [final, interim, listening])
+
+  const toggleMic = () => {
+    if (!speechSupported) return
+    if (listening) {
+      stopSpeech()
+    } else {
+      resetSpeech(); startSpeech();
+      speakNextRef.current = true
+    }
+  }
 
   const loadInitial = useCallback(async () => {
     setLoading(true)
@@ -90,6 +113,13 @@ export default function DoctorChatClient({ userId }: { userId: string }) {
     } else {
       const { message } = await res.json()
       setMessages(prev => prev.map(m => m.id === temp.id ? message : m))
+      if (ttsSupported && speakNextRef.current && message.role === 'doctor') {
+        speakNextRef.current = false
+        const toSpeak = message.content.replace(/\s+/g,' ').trim()
+        if (toSpeak) speak(toSpeak)
+      } else {
+        speakNextRef.current = false
+      }
     }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -110,80 +140,89 @@ export default function DoctorChatClient({ userId }: { userId: string }) {
   }
 
   return (
-  <div className="flex flex-col gap-6 min-h-[80vh] max-w-7xl mx-auto px-2 sm:px-4 pb-8">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Doctor Consultations</h1>
-        <p className="text-sm text-muted-foreground max-w-2xl">Convert an AI assistant thread into a structured consultation and collaborate with a doctor. This is a prototype UI — doctor responses are not yet live.</p>
+  <div className="flex flex-col gap-5 min-h-[80vh] max-w-7xl mx-auto px-3 sm:px-5 pb-10">
+      <div className="flex items-start gap-4 pt-4">
+        <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-600/25 to-emerald-500/10 border border-emerald-700/40">
+          <Stethoscope className="h-6 w-6 text-emerald-400" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-slate-100">Doctor Consultation Workspace</h1>
+          <p className="text-sm leading-relaxed text-slate-400 max-w-2xl">Upgrade an earlier AI conversation into a prepped consultation. We'll summarize key details so a doctor can review faster. (Prototype – real doctor replies not live yet.)</p>
+        </div>
       </div>
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1">
-        <TabsList className="w-fit">
-          <TabsTrigger value="consultations">Consultations</TabsTrigger>
-          <TabsTrigger value="doctors">Doctors</TabsTrigger>
+        <TabsList className="w-fit bg-slate-900/60 border border-slate-700/60">
+          <TabsTrigger value="consultations" className="data-[state=active]:bg-slate-800/80 data-[state=active]:text-white">Consultations</TabsTrigger>
+          <TabsTrigger value="doctors" className="data-[state=active]:bg-slate-800/80 data-[state=active]:text-white">Doctors</TabsTrigger>
         </TabsList>
         <TabsContent value="consultations" className="flex-1 mt-4 flex flex-col gap-6">
           {showOnboarding && (
-            <Card className="border-dashed">
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Getting Started</CardTitle></CardHeader>
-              <CardContent className="text-xs space-y-2 text-muted-foreground">
-                <p>Start a normal AI health chat first. Then return here to convert it into a doctor consultation with an auto-generated clinical summary.</p>
-                <p>The summary and recent transcript are inserted as system context for the doctor.</p>
+            <Card className="border border-slate-700/60 bg-slate-900/60 backdrop-blur">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm text-slate-200 flex items-center gap-2"><MessageSquarePlus className="h-4 w-4 text-emerald-400" /> Create Your First Consultation</CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs space-y-3 text-slate-400">
+                <p>1. Go to the main chat and ask your health question as usual.</p>
+                <p>2. Come back here, pick that earlier chat, and optionally choose a doctor.</p>
+                <p>3. We prep a concise summary to help a doctor review faster.</p>
+                <p className="text-[10px] text-slate-500">Real doctor messaging is coming soon.</p>
               </CardContent>
             </Card>
           )}
           <div className="flex flex-1 gap-6 overflow-hidden">
             <div className="w-80 flex flex-col gap-4 shrink-0">
-              <Card className="flex flex-col h-[340px]">
-                <CardHeader className="py-3"><CardTitle className="text-sm">Consultation Threads</CardTitle></CardHeader>
+              <Card className="flex flex-col h-[340px] border-slate-700/60 bg-slate-900/60 backdrop-blur">
+                <CardHeader className="py-3"><CardTitle className="text-[13px] font-medium text-slate-200">Your Consultations</CardTitle></CardHeader>
                 <CardContent className="pt-0 overflow-y-auto space-y-1 scrollbar-thin">
                   {doctorThreads.map(dt => (
-                    <button key={dt.id} onClick={() => setActiveDoctorThread(dt.id)} className={cn("w-full text-left rounded-md px-3 py-2 text-[13px] border transition", dt.id === activeDoctorThread ? "bg-primary/10 border-primary text-primary-foreground/90" : "border-border hover:bg-muted")}>{dt.title}</button>
+                    <button key={dt.id} onClick={() => setActiveDoctorThread(dt.id)} className={cn("w-full text-left rounded-md px-3 py-2 text-[12px] border transition font-medium", dt.id === activeDoctorThread ? "bg-emerald-600/15 border-emerald-500/60 text-emerald-200" : "border-slate-700/60 hover:bg-slate-800/70 text-slate-300")}>{dt.title}</button>
                   ))}
-                  {doctorThreads.length === 0 && <p className="text-xs text-muted-foreground">No consultations yet.</p>}
+                  {doctorThreads.length === 0 && <p className="text-xs text-slate-500 px-2 py-4">No consultations yet.</p>}
                 </CardContent>
               </Card>
-              <Card className="flex flex-col">
-                <CardHeader className="py-3"><CardTitle className="text-sm">New Consultation</CardTitle></CardHeader>
+              <Card className="flex flex-col border-slate-700/60 bg-slate-900/60 backdrop-blur">
+                <CardHeader className="py-3"><CardTitle className="text-[13px] font-medium text-slate-200">New Consultation</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">Doctor</label>
+                    <label className="text-[10px] uppercase tracking-wide font-medium text-slate-500">Doctor (Optional)</label>
                     <Select onValueChange={v => setSelectedDoctor(v)} value={selectedDoctor || undefined}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Optional" /></SelectTrigger>
+                      <SelectTrigger className="h-8 text-[11px] bg-slate-800/70 border-slate-700/60"><SelectValue placeholder="No preference" /></SelectTrigger>
                       <SelectContent>
                         {mergedDoctors.map(d => <SelectItem key={d.id} value={d.id}>{d.full_name}{d.specialty ? ` — ${d.specialty}` : ""}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] uppercase tracking-wide font-medium text-muted-foreground">AI Thread</label>
+                    <label className="text-[10px] uppercase tracking-wide font-medium text-slate-500">Previous Chat</label>
                     <Select onValueChange={v => setSelectedSourceThread(v)} value={selectedSourceThread || undefined}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Select thread" /></SelectTrigger>
+                      <SelectTrigger className="h-8 text-[11px] bg-slate-800/70 border-slate-700/60"><SelectValue placeholder="Pick a chat" /></SelectTrigger>
                       <SelectContent>
-                        {aiThreads.length === 0 && <div className="px-2 py-1 text-[10px] text-muted-foreground">No assistant threads</div>}
+                        {aiThreads.length === 0 && <div className="px-2 py-1 text-[10px] text-slate-500">No chats yet</div>}
                         {aiThreads.map(t => <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button size="sm" className="w-full" disabled={!selectedSourceThread || creating} onClick={createDoctorThread}>
-                    {creating && creatingSourceThread === selectedSourceThread ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}<span className="ml-1">Create Consultation</span>
+                  <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-500" disabled={!selectedSourceThread || creating} onClick={createDoctorThread}>
+                    {creating && creatingSourceThread === selectedSourceThread ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}<span className="ml-1">Start Consultation</span>
                   </Button>
-                  <Button variant="outline" size="sm" className="w-full" onClick={loadInitial}><RefreshCw className="h-4 w-4 mr-1" />Refresh</Button>
-                  <p className="text-[10px] leading-relaxed text-muted-foreground">We’ll summarize the selected AI thread and seed the consultation automatically.</p>
+                  <Button variant="outline" size="sm" className="w-full border-slate-600/60" onClick={loadInitial}><RefreshCw className="h-4 w-4 mr-1" />Refresh</Button>
+                  <p className="text-[10px] leading-relaxed text-slate-500">We'll auto-summarize that chat for clinical context.</p>
                 </CardContent>
               </Card>
             </div>
-            <div className="flex-1 flex flex-col rounded-xl border bg-gradient-to-b from-background/60 to-background/30 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
+            <div className="flex-1 flex flex-col rounded-xl border border-slate-700/60 bg-gradient-to-b from-slate-900/70 via-slate-900/50 to-slate-900/40 backdrop-blur shadow-sm">
               {activeDoctorThread ? (
                 <div className="flex flex-col h-full">
                   <div className="flex-1 overflow-y-auto p-6 space-y-5 scrollbar-thin">
                     {messages.map(m => (
-                      <div key={m.id} className={cn("group relative rounded-lg p-4 pr-5 text-sm max-w-[720px] border shadow-sm transition", m.role === "user" ? "bg-primary/10 border-primary/40 ml-auto hover:border-primary" : m.role === "doctor" ? "bg-emerald-600/15 border-emerald-600/40 hover:border-emerald-500/60" : "bg-muted/60 border-border hover:border-muted-foreground/40")}> 
+                      <div key={m.id} className={cn("group relative rounded-lg p-4 pr-5 text-sm max-w-[720px] border shadow-sm transition", m.role === "user" ? "bg-slate-800/70 border-slate-700/60 ml-auto" : m.role === "doctor" ? "bg-emerald-700/25 border-emerald-600/50" : "bg-slate-800/50 border-slate-700/50")}> 
                         <div className="flex items-start gap-3">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">{m.role}</span>
-                              <span className="text-[10px] text-muted-foreground/60">{/* timestamp placeholder */}</span>
+                            <div className="flex items-center gap-2 mb-1 text-slate-500">
+                              <span className="text-[10px] uppercase tracking-wide font-medium">{m.role}</span>
+                              <span className="text-[10px] text-slate-600/60">{/* timestamp placeholder */}</span>
                             </div>
-                            <div className="whitespace-pre-wrap leading-relaxed">
+                            <div className="whitespace-pre-wrap leading-relaxed text-slate-200">
                               {m.content}
                             </div>
                           </div>
@@ -192,19 +231,26 @@ export default function DoctorChatClient({ userId }: { userId: string }) {
                     ))}
                     <div ref={bottomRef} />
                   </div>
-                  <div className="border-t border-border bg-background/70 p-4 flex flex-col gap-3">
+                  <div className="border-t border-slate-700/60 bg-slate-900/60 p-4 flex flex-col gap-3">
                     <div className="flex gap-3">
-                      <Textarea value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }}} placeholder="Type a question or note. Shift+Enter for newline." className="min-h-[70px] max-h-48 resize-none" />
-                      <Button onClick={sendMessage} disabled={!newMessage.trim()} className="h-11 px-5 self-end"><Send className="h-4 w-4" /></Button>
+                      <div className="flex-1 relative">
+                        <Textarea value={newMessage} onChange={e => setNewMessage(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }}} placeholder="Ask a follow‑up... (Shift+Enter = new line)" className="min-h-[70px] max-h-48 resize-none pr-20 bg-slate-800/70 border-slate-700/60 text-slate-200 placeholder:text-slate-500" />
+                        {speechSupported && (
+                          <Button type="button" variant={listening ? "default" : "ghost"} size="sm" aria-pressed={listening} className={"absolute top-2 right-12 h-8 w-8 p-0 " + (listening ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse" : "text-muted-foreground hover:text-foreground")} onClick={toggleMic} title={listening ? "Stop voice input" : "Start voice input"}>
+                            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                          </Button>
+                        )}
+                      </div>
+                      <Button onClick={sendMessage} disabled={!newMessage.trim()} className="h-11 px-5 self-end bg-emerald-600 hover:bg-emerald-500"><Send className="h-4 w-4" /></Button>
                     </div>
-                    <p className="text-[10px] text-muted-foreground/70 px-1">Messages are not yet visible to a real doctor. Prototype only.</p>
+                    <p className="text-[10px] text-slate-500 px-1">Prototype only – real doctor messaging coming soon.</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
                   <div className="text-center space-y-2">
-                    <p className="text-muted-foreground/90 font-medium">No consultation selected</p>
-                    <p className="text-xs max-w-xs text-muted-foreground/70">Create a new consultation from an AI thread on the left or pick an existing one to view its summary and messages.</p>
+                    <p className="text-slate-300 font-medium">No consultation selected</p>
+                    <p className="text-xs max-w-xs text-slate-500">Start one from a previous chat using the panel on the left.</p>
                   </div>
                 </div>
               )}
@@ -217,23 +263,23 @@ export default function DoctorChatClient({ userId }: { userId: string }) {
               const initials = d.full_name.split(/\s+/).map(p => p[0]).slice(0,2).join("")
               const rating = (4 + (i % 2 ? 0.5 : 0)).toFixed(1)
               return (
-                <Card key={d.id} className="group relative overflow-hidden border-border/60 hover:border-primary/60 transition">
+                <Card key={d.id} className="group relative overflow-hidden border-slate-700/60 bg-slate-900/60 backdrop-blur hover:border-emerald-500/60 transition">
                   <CardHeader className="pb-2 flex flex-row items-start gap-3">
                     <Avatar className="h-11 w-11 border">
                       <AvatarImage src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(initials)}`} alt={d.full_name} />
                       <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
                     <div className="space-y-1">
-                      <CardTitle className="text-sm font-medium leading-tight">{d.full_name}</CardTitle>
-                      <p className="text-[11px] text-muted-foreground">{d.specialty || "General Practice"}</p>
-                      <p className="text-[10px] text-amber-500 font-medium">★ {rating}</p>
+                      <CardTitle className="text-sm font-medium leading-tight text-slate-200">{d.full_name}</CardTitle>
+                      <p className="text-[11px] text-slate-500">{d.specialty || "General Practice"}</p>
+                      <p className="text-[10px] text-amber-400 font-medium">★ {rating}</p>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-0 text-xs text-muted-foreground space-y-3">
-                    <p>Experienced in evidence-based preventive care and patient-centered guidance.</p>
+                  <CardContent className="pt-0 text-xs text-slate-400 space-y-3">
+                    <p className="leading-relaxed">Evidence-based preventive care & patient-centered guidance.</p>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="h-7 px-2 text-[11px]" onClick={() => pickDoctor(d.id)}>Select</Button>
-                      <Button size="sm" className="h-7 px-2 text-[11px]" disabled>Profile</Button>
+                      <Button size="sm" variant="outline" className="h-7 px-2 text-[11px] border-slate-600/60" onClick={() => pickDoctor(d.id)}>Select</Button>
+                      <Button size="sm" className="h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-500" disabled>Profile</Button>
                     </div>
                   </CardContent>
                 </Card>
