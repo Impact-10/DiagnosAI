@@ -8,6 +8,7 @@ from app.db.crud import (
     add_message,
     get_session_messages,
     get_session,
+    
 )
 from app.services.gemini_client import get_diagnosis_with_history
 import json
@@ -44,6 +45,8 @@ async def create_diagnosis(
         "You are a doctor providing a clear diagnosis based on symptoms. "
         "Respond concisely, avoid mentioning you are AI or disclaimers. "
         "Make it sound like a real doctor-patient conversation."
+        "You are a doctor. Provide a clear, concise diagnosis in (strictly)no more than 5 sentences, listing only key possibilities and symptoms."
+
     )
 
     diagnosis_prompt = instruction + "\n\nSymptoms:\n" + req.prompt
