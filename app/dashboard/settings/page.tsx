@@ -15,5 +15,16 @@ export default async function SettingsPage() {
     redirect("/auth/login")
   }
 
-  return <SettingsClient user={user} />
+  // Fetch patient profile (may not exist; swallow single-row missing error)
+  let healthProfile: any = null
+  try {
+    const { data, error } = await supabase
+      .from('patient_profiles')
+      .select('age, gender, medications, conditions, allergies, height_cm, weight_kg, bmi')
+      .eq('user_id', user.id)
+      .single()
+    if (!error) healthProfile = data
+  } catch {}
+
+  return <SettingsClient user={user} healthProfile={healthProfile} />
 }

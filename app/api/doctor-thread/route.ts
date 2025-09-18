@@ -39,6 +39,25 @@ export async function POST(req: NextRequest) {
       // swallow, fallback to transcript embed
     }
 
+    // (Future) Fetch patient profile (age, medications, conditions) if table exists
+    let profileSummary: string | null = null
+    try {
+      const { data: p } = await supabase
+        .from('patient_profiles')
+        .select('age, gender, medications, conditions, allergies, height_cm, weight_kg, bmi')
+        .eq('user_id', userId)
+        .single()
+      if (p) {
+        const metrics = [] as string[]
+        if (p.height_cm) metrics.push(`Height: ${p.height_cm} cm`)
+        if (p.weight_kg) metrics.push(`Weight: ${p.weight_kg} kg`)
+        if (p.bmi) metrics.push(`BMI: ${p.bmi}`)
+        profileSummary = `Patient Profile:\n- Age: ${p.age ?? 'N/A'}\n- Gender: ${p.gender || 'N/A'}\n- ${metrics.join(' | ') || 'No anthropometrics'}\n- Medications: ${p.medications || 'None reported'}\n- Conditions: ${p.conditions || 'None reported'}\n- Allergies: ${p.allergies || 'None reported'}`
+      }
+    } catch (e) {
+      // swallow profile errors (table may not exist yet)
+    }
+
     // Create doctor thread
     const { data: newThread, error: dtErr } = await supabase
       .from('doctor_threads')
@@ -48,12 +67,14 @@ export async function POST(req: NextRequest) {
     if (dtErr) throw dtErr
 
     const systemIntro = `System: This consultation thread was initiated by the patient. The following report summarizes the patient's AI assistant conversation and context.`
-    const summaryContent = report || 'Report generation failed; including raw recent transcript.\n\n' + msgs.slice(-10).map(m => `${m.role}: ${m.content}`).join('\n')
+    const summaryContent = (report || 'Report generation failed; including raw recent transcript.\n\n' + msgs.slice(-10).map(m => `${m.role}: ${m.content}`).join('\n')) + (profileSummary ? ('\n\n' + profileSummary) : '')
+    const doctorGreeting = `doctor: Hello, I'm reviewing your provided summary now. I'll ask a couple of clarifying questions to ensure I understand your situation correctly. Feel free to add anything you think is important.`
 
     // Seed system + report messages (as system role, reuse doctor_messages table with role system/user distinction)
     const seedMessages = [
       { doctor_thread_id: newThread.id, role: 'system', content: systemIntro },
       { doctor_thread_id: newThread.id, role: 'system', content: summaryContent },
+      { doctor_thread_id: newThread.id, role: 'doctor', content: doctorGreeting },
     ]
     const { error: insErr } = await supabase.from('doctor_messages').insert(seedMessages)
     if (insErr) throw insErr

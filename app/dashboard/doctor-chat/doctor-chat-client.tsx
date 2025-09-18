@@ -111,11 +111,11 @@ export default function DoctorChatClient({ userId }: { userId: string }) {
     if (!res.ok) {
       setMessages(prev => prev.filter(m => m.id !== temp.id))
     } else {
-      const { message } = await res.json()
-      setMessages(prev => prev.map(m => m.id === temp.id ? message : m))
-      if (ttsSupported && speakNextRef.current && message.role === 'doctor') {
+      const { message, doctorReply } = await res.json()
+      setMessages(prev => prev.map(m => m.id === temp.id ? message : m).concat(doctorReply ? [doctorReply] : []))
+      if (ttsSupported && speakNextRef.current && doctorReply && doctorReply.role === 'doctor') {
         speakNextRef.current = false
-        const toSpeak = message.content.replace(/\s+/g,' ').trim()
+        const toSpeak = doctorReply.content.replace(/\s+/g,' ').trim()
         if (toSpeak) speak(toSpeak)
       } else {
         speakNextRef.current = false

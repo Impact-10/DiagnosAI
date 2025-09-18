@@ -32,7 +32,24 @@ export async function POST(req: NextRequest) {
       .single()
     if (insErr) throw insErr
 
-    return NextResponse.json({ message: inserted })
+    // Poll briefly (up to ~1.5s) for trigger inserted doctor message newer than user message
+    let doctorReply = null
+    const start = Date.now()
+    while (Date.now() - start < 1500) {
+      const { data: dmsg } = await supabase
+        .from('doctor_messages')
+        .select('id, role, content, created_at')
+        .eq('doctor_thread_id', doctorThreadId)
+        .gte('created_at', inserted.created_at)
+        .order('created_at', { ascending: true })
+      if (dmsg && dmsg.length) {
+        // find first doctor role after the user message
+        const found = dmsg.find(m => m.role === 'doctor')
+        if (found) { doctorReply = found; break }
+      }
+      await new Promise(r => setTimeout(r, 150))
+    }
+    return NextResponse.json({ message: inserted, doctorReply })
   } catch (e) {
     console.error("Doctor message send error", e)
     return NextResponse.json({ error: "Failed to send message" }, { status: 500 })

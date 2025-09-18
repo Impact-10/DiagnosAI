@@ -3,15 +3,38 @@
 import { useState } from "react"
 import type { User } from "@supabase/supabase-js"
 import { Button } from "@/components/ui/button"
+import { HealthProfileForm } from "@/components/dashboard/health-profile-form"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
-interface SettingsClientProps {
-  user: User
+interface HealthProfile {
+  age?: number | null
+  gender?: string | null
+  medications?: string | null
+  conditions?: string | null
+  allergies?: string | null
+  height_cm?: number | null
+  weight_kg?: number | null
+  bmi?: number | null
 }
 
-export default function SettingsClient({ user }: SettingsClientProps) {
+interface SettingsClientProps {
+  user: User
+  healthProfile?: HealthProfile | null
+}
+
+export default function SettingsClient({ user, healthProfile }: SettingsClientProps) {
+  const normalizedHealthProfile = healthProfile ? {
+    age: healthProfile.age ?? undefined,
+    gender: healthProfile.gender ?? undefined,
+    medications: healthProfile.medications ?? undefined,
+    conditions: healthProfile.conditions ?? undefined,
+    allergies: healthProfile.allergies ?? undefined,
+    height_cm: healthProfile.height_cm ?? undefined,
+    weight_kg: healthProfile.weight_kg ?? undefined,
+    bmi: healthProfile.bmi ?? undefined,
+  } : undefined
   const [email, setEmail] = useState(user.email || "")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -88,7 +111,7 @@ export default function SettingsClient({ user }: SettingsClientProps) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 space-y-10">
+  <div className="max-w-4xl mx-auto p-6 space-y-10">
       <h1 className="text-3xl font-semibold tracking-tight text-foreground">Account Settings</h1>
       {error && (
         <Alert className="border border-destructive/50 bg-destructive/15 backdrop-blur-sm">
@@ -160,7 +183,9 @@ export default function SettingsClient({ user }: SettingsClientProps) {
         </CardContent>
       </Card>
 
-      <Card className="bg-destructive/10 border border-destructive/40 shadow-sm">
+  <HealthProfileForm initialProfile={normalizedHealthProfile} />
+
+  <Card className="bg-destructive/10 border border-destructive/40 shadow-sm">
         <CardHeader>
           <CardTitle className="text-destructive tracking-wide">Danger Zone</CardTitle>
         </CardHeader>
