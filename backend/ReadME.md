@@ -61,7 +61,8 @@ curl -X POST http://localhost:8000/api/users/token \
 -H "Content-Type: application/json" \
 -d '{"email":"test@example.com","password":"testpassword"}'
 
-curl -X POST http://localhost:8000/api/diagnosis \
--H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIn0.t3_DM4moMnetRLI3w9FNY0m_Pg3ZJ-5dbnhJCduSuOA" \
+curl -X POST "http://localhost:8000/api/diagnosis" \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMkBleGFtcGxlLmNvbSJ9.F5LnMI-GKx6bLGSvrhcnfG0PK_2mxUYoFOMo0gH_C78" \
 -H "Content-Type: application/json" \
--d '{"prompt": "I have fever and cough"}'
+-d '{"prompt": "I have a persistent cough"}'
+
