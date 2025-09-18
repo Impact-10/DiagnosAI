@@ -1,3 +1,11 @@
+
+pydantic
+sqlalchemy
+databases  # for async DB access
+jose  # for JWT token management
+requests
+geopy
+
 fastapi                    # Web framework
 uvicorn[standard]          # ASGI server with extras
 httpx                      # Async HTTP client for external API calls
@@ -11,3 +19,4 @@ SQLAlchemy[asyncio]        # ORM with async support
 asyncpg                    # Async PostgreSQL driver
 psycopg2-binary            # PostgreSQL driver used by SQLAlchemy
 databases                  # Optional async DB toolkit
+

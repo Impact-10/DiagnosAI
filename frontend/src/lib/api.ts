@@ -1,4 +1,7 @@
+/// <reference types="vite/client" />
 import axios from 'axios';
+
+// Vite provides types for import.meta.env via vite/client, so no need to redeclare them here.
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
