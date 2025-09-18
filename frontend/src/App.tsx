@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "./components/ui/button";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { Badge } from "./components/ui/badge";
@@ -14,8 +15,12 @@ import { HealthRecords } from "./components/HealthRecords";
 import { ClinicFinder } from "./components/ClinicFinder";
 import { LoginDialog } from "./components/auth/LoginDialog";
 import { UserProfile } from "./components/auth/UserProfile";
+import { ReportPage } from "./components/ReportPage";
+import { MapView } from "./components/MapView";
 import { authService } from "./services/authService";
 import { diagnosisService } from "./services/diagnosisService";
+import { Facility } from "./services/diagnosisService";
+import 'leaflet/dist/leaflet.css';
 import { Bot, AlertTriangle, Stethoscope, Phone, MoreVertical, Moon, Sun, Camera, FileText, MapPin, User, LogIn, LogOut } from "lucide-react";
 
 interface Message {
@@ -40,6 +45,7 @@ const mockBotResponses = {
 };
 
 export default function App() {
+  const navigate = useNavigate();
   const [showWelcome, setShowWelcome] = useState(true);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -54,6 +60,9 @@ export default function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [showMap, setShowMap] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const formatTimestamp = () => {
@@ -280,6 +289,39 @@ export default function App() {
     }
   }, [messages, isTyping]);
 
+  // Fetch user location and facilities on mount
+  useEffect(() => {
+    const fetchLocationAndFacilities = async () => {
+      if (!navigator.geolocation) {
+        setUserLocation({ lat: 40.7128, lng: -74.006 });
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const location = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserLocation(location);
+          try {
+            const data = await diagnosisService.getNearbyFacilities({
+              location,
+              diagnosis: "general",
+              preferences: { urgency: "normal" },
+            });
+            setFacilities(data);
+          } catch (error) {
+            console.error('Failed to fetch facilities:', error);
+          }
+        },
+        () => {
+          setUserLocation({ lat: 40.7128, lng: -74.006 });
+        }
+      );
+    };
+
+    if (!showWelcome) {
+      fetchLocationAndFacilities();
+    }
+  }, [showWelcome]);
+
   if (showWelcome) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -300,191 +342,196 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-              <Bot className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-[1.125rem] font-medium text-foreground">Medical Assistant</h1>
+    <Routes>
+      <Route path="/" element={
+        <div className="min-h-screen bg-background flex flex-col">
+          {/* Fixed Header */}
+          <div className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <h1 className="text-[1.125rem] font-medium text-foreground">Medical Assistant</h1>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-success rounded-full"></div>
+                    <span className="text-[0.75rem] font-normal text-muted-foreground">Online</span>
+                  </div>
+                </div>
+              </div>
               <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-success rounded-full"></div>
-                <span className="text-[0.75rem] font-normal text-muted-foreground">Online</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/reports', { state: { messages } })}
+                  className="text-primary hover:text-primary/80 text-sm font-medium"
+                >
+                  <FileText className="w-4 h-4 mr-1" />
+                  Reports
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSymptomChecker(true)}
+                  className="text-primary hover:text-primary/80 text-sm font-medium"
+                >
+                  <Stethoscope className="w-4 h-4 mr-1" />
+                  Symptoms
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowImageUpload(true)}
+                  className="text-primary hover:text-primary/80 text-sm font-medium"
+                >
+                  <Camera className="w-4 h-4 mr-1" />
+                  Images
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowClinicFinder(true)}
+                  className="text-primary hover:text-primary/80 text-sm font-medium"
+                >
+                  <MapPin className="w-4 h-4 mr-1" />
+                  Find Care
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowEmergencyDialog(true)}
+                  className="text-destructive hover:text-destructive/80 text-sm font-medium"
+                >
+                  <Phone className="w-4 h-4 mr-1" />
+                  Emergency
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleDarkMode}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </Button>
+                
+                {/* User Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      {isAuthenticated ? (
+                        <User className="w-4 h-4" />
+                      ) : (
+                        <MoreVertical className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {isAuthenticated ? (
+                      <>
+                        <DropdownMenuItem onClick={() => setShowUserProfile(true)}>
+                          <User className="w-4 h-4 mr-2" />
+                          Profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowHealthRecords(true)}>
+                          <FileText className="w-4 h-4 mr-2" />
+                          Health Records
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleLogout}>
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Sign Out
+                        </DropdownMenuItem>
+                      </>
+                    ) : (
+                      <DropdownMenuItem onClick={() => setShowLoginDialog(true)}>
+                        <LogIn className="w-4 h-4 mr-2" />
+                        Sign In
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            {/* Medical Disclaimer */}
+            <div className="bg-warning/10 border-b border-warning/20 p-3">
+              <div className="flex items-center gap-2 text-xs text-warning-foreground">
+                <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                <span>This chatbot provides general health information and does not replace professional medical advice.</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSymptomChecker(true)}
-              className="text-primary hover:text-primary/80 text-sm font-medium"
-            >
-              <Stethoscope className="w-4 h-4 mr-1" />
-              Symptoms
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowImageUpload(true)}
-              className="text-primary hover:text-primary/80 text-sm font-medium"
-            >
-              <Camera className="w-4 h-4 mr-1" />
-              Images
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowClinicFinder(true)}
-              className="text-primary hover:text-primary/80 text-sm font-medium"
-            >
-              <MapPin className="w-4 h-4 mr-1" />
-              Find Care
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowEmergencyDialog(true)}
-              className="text-destructive hover:text-destructive/80 text-sm font-medium"
-            >
-              <Phone className="w-4 h-4 mr-1" />
-              Emergency
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleDarkMode}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-            
-            {/* User Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  {isAuthenticated ? (
-                    <User className="w-4 h-4" />
-                  ) : (
-                    <MoreVertical className="w-4 h-4" />
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {isAuthenticated ? (
-                  <>
-                    <DropdownMenuItem onClick={() => setShowUserProfile(true)}>
-                      <User className="w-4 h-4 mr-2" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowHealthRecords(true)}>
-                      <FileText className="w-4 h-4 mr-2" />
-                      Health Records
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </DropdownMenuItem>
-                  </>
-                ) : (
-                  <DropdownMenuItem onClick={() => setShowLoginDialog(true)}>
-                    <LogIn className="w-4 h-4 mr-2" />
-                    Sign In
-                  </DropdownMenuItem>
+          {/* Chat Messages - with top padding for fixed header */}
+          <div className="pt-32 pb-4 flex-1">
+            <ScrollArea ref={scrollAreaRef} className="h-full px-4">
+              <div className="py-4 space-y-4">
+                {messages.map((message) => (
+                  <ChatBubble
+                    key={message.id}
+                    message={message.content}
+                    isBot={message.isBot}
+                    timestamp={message.timestamp}
+                  />
+                ))}
+                {isTyping && (
+                  <ChatBubble
+                    message=""
+                    isBot={true}
+                    timestamp={formatTimestamp()}
+                    isTyping={true}
+                  />
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              </div>
+            </ScrollArea>
           </div>
+
+          {/* Bottom Section */}
+          <div className="bg-background border-t border-border">
+            {/* Quick Replies */}
+            <QuickReplies options={quickReplies} onSelect={handleQuickReply} />
+            {/* Chat Input */}
+            <ChatInput 
+              onSendMessage={handleSendMessage} 
+              disabled={isTyping}
+              placeholder="Type your health question..."
+            />
+          </div>
+          {/* Modals */}
+          <SymptomChecker
+            open={showSymptomChecker}
+            onOpenChange={setShowSymptomChecker}
+            onComplete={handleSymptomCheckerComplete}
+          />
+          <EmergencyDialog
+            open={showEmergencyDialog}
+            onOpenChange={setShowEmergencyDialog}
+          />
+          <ImageUpload
+            open={showImageUpload}
+            onOpenChange={setShowImageUpload}
+            onComplete={handleImageUpload}
+          />
+          <HealthRecords
+            open={showHealthRecords}
+            onOpenChange={setShowHealthRecords}
+          />
+          <ClinicFinder
+            open={showClinicFinder}
+            onOpenChange={setShowClinicFinder}
+          />
+          <LoginDialog
+            open={showLoginDialog}
+            onOpenChange={setShowLoginDialog}
+            onSuccess={handleAuthSuccess}
+          />
+          <UserProfile
+            open={showUserProfile}
+            onOpenChange={setShowUserProfile}
+          />
         </div>
-
-        {/* Medical Disclaimer */}
-        <div className="bg-warning/10 border-b border-warning/20 p-3">
-          <div className="flex items-center gap-2 text-xs text-warning-foreground">
-            <AlertTriangle className="w-3 h-3 flex-shrink-0" />
-            <span>This chatbot provides general health information and does not replace professional medical advice.</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Chat Messages - with top padding for fixed header */}
-      <div className="pt-32 pb-32 flex-1">
-        <ScrollArea ref={scrollAreaRef} className="h-full px-4">
-          <div className="py-4 space-y-4">
-            {messages.map((message) => (
-              <ChatBubble
-                key={message.id}
-                message={message.content}
-                isBot={message.isBot}
-                timestamp={message.timestamp}
-              />
-            ))}
-            {isTyping && (
-              <ChatBubble
-                message=""
-                isBot={true}
-                timestamp={formatTimestamp()}
-                isTyping={true}
-              />
-            )}
-          </div>
-        </ScrollArea>
-      </div>
-
-      {/* Fixed Bottom Section */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">
-        {/* Quick Replies */}
-        <QuickReplies options={quickReplies} onSelect={handleQuickReply} />
-
-        {/* Chat Input */}
-        <ChatInput 
-          onSendMessage={handleSendMessage} 
-          disabled={isTyping}
-          placeholder="Type your health question..."
-        />
-      </div>
-
-      {/* Modals */}
-      <SymptomChecker
-        open={showSymptomChecker}
-        onOpenChange={setShowSymptomChecker}
-        onComplete={handleSymptomCheckerComplete}
-      />
-
-      <EmergencyDialog
-        open={showEmergencyDialog}
-        onOpenChange={setShowEmergencyDialog}
-      />
-
-      <ImageUpload
-        open={showImageUpload}
-        onOpenChange={setShowImageUpload}
-        onComplete={handleImageUpload}
-      />
-
-      <HealthRecords
-        open={showHealthRecords}
-        onOpenChange={setShowHealthRecords}
-      />
-
-      <ClinicFinder
-        open={showClinicFinder}
-        onOpenChange={setShowClinicFinder}
-      />
-
-      <LoginDialog
-        open={showLoginDialog}
-        onOpenChange={setShowLoginDialog}
-        onSuccess={handleAuthSuccess}
-      />
-
-      <UserProfile
-        open={showUserProfile}
-        onOpenChange={setShowUserProfile}
-      />
-    </div>
+      } />
+      <Route path="/reports" element={<ReportPage />} />
+    </Routes>
   );
 }
