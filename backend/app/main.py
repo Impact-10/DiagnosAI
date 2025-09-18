@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.exception_handlers import RequestValidationError
@@ -6,9 +7,25 @@ from dotenv import load_dotenv
 import os
 from app.api import users, healthdata, diagnosis, records, referral
 
+app = FastAPI(
+    title="DiagnosAI Backend",
+    description="Backend API for DiagnosAI Health Chatbot",
+    version="1.0.0",
+)
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 load_dotenv()
-app = FastAPI(title="DiagnosAI Backend")
 
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(healthdata.router, prefix="/healthdata", tags=["Health Data"])
@@ -38,3 +55,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(diagnosis.router, prefix="/api", tags=["diagnosis"])
+
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to DiagnosAI Backend"}

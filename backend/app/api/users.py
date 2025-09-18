@@ -1,29 +1,45 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel, EmailStr
-from app.db import crud, session
-from app.models.user import UserCreate, UserOut
-from app.core.security import get_password_hash, verify_password
-from app.core.dependencies import get_db
+from passlib.context import CryptContext
+from app.db.crud import get_user_by_email, create_user
+from jose import jwt
+import os
 
 router = APIRouter()
 
-class UserLogin(BaseModel):
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "yoursecretkey")
+ALGORITHM = "HS256"
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+class UserCreate(BaseModel):
     email: EmailStr
     password: str
 
-@router.post("/register", response_model=UserOut)
-async def register_user(user: UserCreate, db=Depends(get_db)):
-    db_user = await crud.get_user_by_email(db, user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    user.password = get_password_hash(user.password)
-    created_user = await crud.create_user(db, user)
-    return created_user
 
-@router.post("/login")
-async def login(user: UserLogin, db=Depends(get_db)):
-    db_user = await crud.get_user_by_email(db, user.email)
-    if not db_user or not verify_password(user.password, db_user.password):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    # Generate JWT Token here (not shown)
-    return {"message": "Login successful", "token": "jwt-token-placeholder"}
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+async def register_user(user: UserCreate):
+    existing = await get_user_by_email(user.email)
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed = hash_password(user.password)
+    new_user = await create_user(user.email, hashed)
+    return {"email": new_user.email}
+
+
+@router.post("/token", response_model=TokenResponse)
+async def login(user: UserCreate):
+    db_user = await get_user_by_email(user.email)
+    if not db_user or not pwd_context.verify(user.password, db_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect email or password")
+    token = jwt.encode({"sub": db_user.email}, SECRET_KEY, algorithm=ALGORITHM)
+    return {"access_token": token}

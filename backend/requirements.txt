@@ -1,10 +1,22 @@
-fastapi
-uvicorn[standard]
+
 pydantic
 sqlalchemy
 databases  # for async DB access
-python-dotenv  # env variable management
-passlib[bcrypt]  # for password hashing
 jose  # for JWT token management
 requests
 geopy
+
+fastapi                    # Web framework
+uvicorn[standard]          # ASGI server with extras
+httpx                      # Async HTTP client for external API calls
+aioredis                   # Async Redis client for caching
+python-dotenv              # Load environment variables from .env
+google-genai               # Gemini API client
+asyncio                    # Python built-in async support (Python 3.7+)
+passlib[bcrypt]            # Password hashing for security
+python-jose[cryptography]  # JWT authentication
+SQLAlchemy[asyncio]        # ORM with async support
+asyncpg                    # Async PostgreSQL driver
+psycopg2-binary            # PostgreSQL driver used by SQLAlchemy
+databases                  # Optional async DB toolkit
+

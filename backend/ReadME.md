@@ -52,3 +52,17 @@ This folder contains the backend code for DiagnosAI, an AI-powered health chatbo
 ---
 
 This modular backend structure ensures fast, scalable, and collaborative development for DiagnosAI.
+
+python -m uvicorn app.main:app --reload
+
+curl -X POST http://localhost:8000/api/users/register -H "Content-Type: application/json" -d '{"email":"user2@example.com", "password":"StrongPassword123"}'
+
+curl -X POST http://localhost:8000/api/users/token \
+-H "Content-Type: application/json" \
+-d '{"email":"test@example.com","password":"testpassword"}'
+
+curl -X POST "http://localhost:8000/api/diagnosis" \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMkBleGFtcGxlLmNvbSJ9.F5LnMI-GKx6bLGSvrhcnfG0PK_2mxUYoFOMo0gH_C78" \
+-H "Content-Type: application/json" \
+-d '{"prompt": "I have a persistent cough"}'
+
