@@ -1,14 +1,17 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
+// Paths configuration
+const AUTH_ROOT = "/auth"
+const LOGIN_PATH = `${AUTH_ROOT}/login`
+const SIGNUP_PATH = `${AUTH_ROOT}/signup`
+const VERIFY_EMAIL_PATH = `${AUTH_ROOT}/verify-email`
+const ERROR_PATH = `${AUTH_ROOT}/error`
+const DASHBOARD_PATH = "/dashboard"
 
-  // With Fluid compute, don't put this client in a global environment
-  // variable. Always create a new one on each request.
-  const supabase = createServerClient(
+// Helper to create a Supabase server client bound to middleware request/response
+function createMiddlewareClient(request: NextRequest, responseRef: { current: NextResponse }) {
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -18,49 +21,55 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+          responseRef.current = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => responseRef.current.cookies.set(name, value, options))
         },
       },
     },
   )
+}
 
-  // Do not run code between createServerClient and
-  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
-  // issues with users being randomly logged out.
+export async function updateSession(request: NextRequest) {
+  const responseRef = { current: NextResponse.next({ request }) }
+  const supabase = createMiddlewareClient(request, responseRef)
 
-  // IMPORTANT: If you remove getUser() and you use server-side rendering
-  // with the Supabase client, your users may be randomly logged out.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data, error: userError } = await supabase.auth.getUser()
+  const user = data?.user
 
-  if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth")
-  ) {
-    // no user, potentially respond by redirecting the user to the login page
+  const path = request.nextUrl.pathname
+  const isAuthRoute = path.startsWith(AUTH_ROOT)
+  const isPublic = path === "/" || path.startsWith("/api") || isAuthRoute
+
+  // If user not logged in and accessing a protected route -> redirect to login with next param
+  if (!user && !isPublic) {
     const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
+    url.pathname = LOGIN_PATH
+    url.searchParams.set("next", path)
     return NextResponse.redirect(url)
   }
 
-  // IMPORTANT: You *must* return the supabaseResponse object as it is.
-  // If you're creating a new response object with NextResponse.next() make sure to:
-  // 1. Pass the request in it, like so:
-  //    const myNewResponse = NextResponse.next({ request })
-  // 2. Copy over the cookies, like so:
-  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-  // 3. Change the myNewResponse object to fit your needs, but avoid changing
-  //    the cookies!
-  // 4. Finally:
-  //    return myNewResponse
-  // If this is not done, you may be causing the browser and server to go out
-  // of sync and terminate the user's session prematurely!
+  // If user is logged in but email not confirmed yet & not currently on verify page -> send them there
+  if (user && !user.email_confirmed_at && path !== VERIFY_EMAIL_PATH) {
+    // allow signup page redirect to verify, but block other auth pages
+    const url = request.nextUrl.clone()
+    url.pathname = VERIFY_EMAIL_PATH
+    return NextResponse.redirect(url)
+  }
 
-  return supabaseResponse
+  // Authenticated users hitting login/signup should go to dashboard
+  if (user && (path === LOGIN_PATH || path === SIGNUP_PATH)) {
+    const url = request.nextUrl.clone()
+    url.pathname = DASHBOARD_PATH
+    return NextResponse.redirect(url)
+  }
+
+  // Optional: If on verify page but email already confirmed -> dashboard
+  if (user && user.email_confirmed_at && path === VERIFY_EMAIL_PATH) {
+    const url = request.nextUrl.clone()
+    url.pathname = DASHBOARD_PATH
+    return NextResponse.redirect(url)
+  }
+
+  // Pass through (must return the supabase-bound response)
+  return responseRef.current
 }

@@ -1,23 +1,27 @@
 "use client"
+export const dynamic = "force-dynamic"
 
 import type React from "react"
-
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import { useState } from "react"
 
-export default function SignUpPage() {
+function SignUpFormInner() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [fullName, setFullName] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = searchParams.get("next") || "/dashboard"
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,7 +36,7 @@ export default function SignUpPage() {
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters long")
+      setError("Password must be at least 6 characters")
       setIsLoading(false)
       return
     }
@@ -42,42 +46,58 @@ export default function SignUpPage() {
         email,
         password,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/`,
+          data: {
+            full_name: fullName,
+          },
         },
       })
-      if (error) throw error
-      router.push("/auth/signup-success")
+
+      if (error) {
+        if (error.message.includes("already registered")) {
+          setError("An account with this email already exists")
+        } else if (error.message.includes("Password")) {
+          setError("Password must be at least 6 characters with a mix of letters and numbers")
+        } else {
+          setError(error.message)
+        }
+        return
+      }
+
+  router.replace("/auth/verify-email")
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred")
+      setError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
-          <CardHeader className="text-center pb-2">
-            <div className="mx-auto w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                />
-              </svg>
-            </div>
-            <CardTitle className="text-2xl font-bold text-gray-900 dark:text-white">Create Account</CardTitle>
-            <CardDescription className="text-gray-600 dark:text-gray-300">
-              Join us to start your health journey
-            </CardDescription>
+        <Card className="bg-slate-900 border-slate-800">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl text-white">Create Account</CardTitle>
+            <CardDescription className="text-slate-400">Join your AI Health Assistant</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <form onSubmit={handleSignUp} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="fullName" className="text-slate-200">
+                  Full Name
+                </Label>
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="John Doe"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-slate-200">
                   Email
                 </Label>
                 <Input
@@ -87,11 +107,12 @@ export default function SignUpPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="password" className="text-slate-200">
                   Password
                 </Label>
                 <Input
@@ -101,11 +122,12 @@ export default function SignUpPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="confirmPassword" className="text-slate-200">
                   Confirm Password
                 </Label>
                 <Input
@@ -115,33 +137,38 @@ export default function SignUpPage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
+                  disabled={isLoading}
                 />
               </div>
               {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
-                  {error}
-                </div>
+                <div className="text-red-400 text-sm bg-red-950/50 p-3 rounded-md border border-red-900">{error}</div>
               )}
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
                 disabled={isLoading}
               >
                 {isLoading ? "Creating account..." : "Create Account"}
               </Button>
             </form>
-            <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-600">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Already have an account?{" "}
-                <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
-                  Sign in
-                </Link>
-              </p>
+            <div className="mt-6 text-center text-sm text-slate-400">
+              Already have an account?{" "}
+              <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 underline underline-offset-4">
+                Sign in
+              </Link>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center text-slate-300">Loading...</div>}>
+      <SignUpFormInner />
+    </Suspense>
   )
 }
