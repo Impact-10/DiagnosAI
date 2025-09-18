@@ -88,7 +88,37 @@ export default function HealthHomePage() {
     <div className="relative min-h-screen bg-gradient-to-b from-slate-950 via-slate-930 to-slate-900 text-slate-200 pb-20">
       <LandingHeader />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 space-y-14">
-        <main className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        {/* Hero: AI Chat focus */}
+        <section className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-indigo-900/30 backdrop-blur px-8 py-14 flex flex-col lg:flex-row gap-12">
+          <div className="flex-1 space-y-6">
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/15 ring-1 ring-inset ring-indigo-400/30 px-4 py-1 text-[11px] tracking-wide uppercase font-medium text-indigo-300">AI Health Companion</div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight leading-tight max-w-2xl bg-gradient-to-r from-slate-50 via-slate-200 to-indigo-200 bg-clip-text text-transparent">Chat with an Intelligent Health Assistant</h1>
+            <p className="text-sm md:text-base text-slate-400 max-w-xl leading-relaxed">Ask evidence-aware questions, get lifestyle guidance, and generate structured consultation summaries. Your data is protected and you always get a reminder to seek real medical care for serious concerns.</p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <a href="/auth/login" className="text-[13px] font-medium px-5 py-2.5 rounded-md bg-indigo-500 text-white shadow hover:bg-indigo-400 transition-colors">Start Chatting</a>
+              <a href="/myths" className="text-[13px] font-medium px-5 py-2.5 rounded-md border border-slate-600/60 text-slate-300 hover:bg-slate-800/60 transition-colors">Learn Myths</a>
+              <a href="/first-aid" className="text-[13px] font-medium px-5 py-2.5 rounded-md border border-slate-600/60 text-slate-300 hover:bg-slate-800/60 transition-colors">First Aid Basics</a>
+            </div>
+            <ul className="grid sm:grid-cols-3 gap-4 pt-6 text-[11px] text-slate-400 max-w-2xl">
+              <li className="flex items-start gap-2"><span className="mt-1 size-1.5 rounded-full bg-emerald-400" />No general chit‑chat: focused health context</li>
+              <li className="flex items-start gap-2"><span className="mt-1 size-1.5 rounded-full bg-amber-400" />Encourages professional follow‑up</li>
+              <li className="flex items-start gap-2"><span className="mt-1 size-1.5 rounded-full bg-blue-400" />Generates conversation summaries</li>
+            </ul>
+          </div>
+          <div className="flex-1 relative min-h-[320px] lg:min-h-[380px]">
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-transparent blur-3xl" />
+            <div className="relative h-full w-full grid grid-rows-6 grid-cols-6 gap-2">
+              {[...Array(16)].map((_,i) => (
+                <div key={i} className="col-span-2 row-span-2 rounded-lg border border-slate-700/60 bg-slate-800/40 flex items-center justify-center text-[10px] text-slate-400">
+                  {i % 3 === 0 ? 'Sleep' : i % 3 === 1 ? 'Nutrition' : 'Stress'}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="absolute -top-20 -right-20 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+        </section>
+
+        <main className="grid grid-cols-1 lg:grid-cols-12 gap-10 pt-4">
           <section className="lg:col-span-8 space-y-10">
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 ring-1 ring-inset ring-indigo-400/30 px-4 py-1 text-[11px] tracking-wide uppercase font-medium text-indigo-300">Live Insights</div>

@@ -1,15 +1,8 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
+import { redirect } from 'next/navigation'
 
-export default async function HomePage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export const dynamic = 'force-dynamic'
+export const metadata = { title: 'Home' }
 
-  if (user) {
-    redirect("/dashboard")
-  } else {
-    redirect("/auth/login")
-  }
+export default function RootPage() {
+  redirect('/home')
 }

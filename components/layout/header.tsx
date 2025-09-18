@@ -39,9 +39,13 @@ export function Header({ user, profile }: HeaderProps) {
           <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
             <span>Your personal health companion</span>
             <span className="hidden sm:inline-block w-px h-3 bg-slate-700" />
+            <Link href="/home" className="hover:text-slate-200 transition-colors">Home</Link>
+            <span className="hidden sm:inline-block w-px h-3 bg-slate-700" />
             <Link href="/myths" className="hover:text-slate-200 transition-colors">Myths</Link>
             <span className="hidden sm:inline-block w-px h-3 bg-slate-700" />
             <Link href="/dos-donts" className="hover:text-slate-200 transition-colors">Dos & Don&apos;ts</Link>
+            <span className="hidden sm:inline-block w-px h-3 bg-slate-700" />
+            <Link href="/first-aid" className="hover:text-slate-200 transition-colors">First Aid</Link>
           </div>
         </div>
         <div className="flex items-center gap-4">
